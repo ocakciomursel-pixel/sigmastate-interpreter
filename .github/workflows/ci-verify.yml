@@ -1,0 +1,25 @@
+name: CI Verify Batch 5B
+on:
+  push:
+    branches:
+      - ci-test-batch5b
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: olafurpg/setup-scala@v10
+        with:
+          java-version: adopt@1.8
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.sbt
+            ~/.ivy2/cache
+            ~/.coursier/cache/v1
+            ~/.cache/coursier/v1
+          key: ${{ runner.os }}-sbt-cache-v4-${{ hashFiles('**/*.sbt') }}-${{ hashFiles('project/build.properties') }}
+      - name: Run targeted tests
+        run: sbt -jvm-opts ci/ci.jvmopts ++2.13.18 "scJVM/testOnly sigma.compiler.phases.NAryFunctionLoweringTest sigmastate.lang.SigmaCompilerTest sigmastate.lang.DebugFuncTest sigmastate.lang.SigmaTyperTest sigmastate.utxo.BasicOpsSpecification"
