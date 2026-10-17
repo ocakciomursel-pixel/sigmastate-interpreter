@@ -129,6 +129,22 @@ class SigmaCompilerTest extends CompilerTestingCommons with LangTests with Objec
     an[TyperException] should be thrownBy comp("getVar[Byte](\"ha\")")
   }
 
+  property("executeFromSelfReg") {
+    // Int and Long literals are auto-downcast to Byte to match the SByte parameter.
+    comp("executeFromSelfReg[Boolean](4)") shouldBe DeserializeRegister(ErgoBox.R4, SBoolean, None)
+    comp("executeFromSelfReg[Boolean](4L)") shouldBe DeserializeRegister(ErgoBox.R4, SBoolean, None)
+    an[InvalidArguments] should be thrownBy comp("executeFromSelfReg[Boolean](99)")
+  }
+
+  property("executeFromSelfRegWithDefault") {
+    comp("executeFromSelfRegWithDefault[Boolean](4, false)") shouldBe
+      DeserializeRegister(ErgoBox.R4, SBoolean, Some(FalseLeaf))
+    comp("executeFromSelfRegWithDefault[Boolean](4L, false)") shouldBe
+      DeserializeRegister(ErgoBox.R4, SBoolean, Some(FalseLeaf))
+    // Out-of-range id short-circuits to the default at compile time.
+    comp("executeFromSelfRegWithDefault[Boolean](99, false)") shouldBe FalseLeaf
+  }
+
   property("PK (testnet network prefix)") {
     implicit val ergoAddressEncoder: ErgoAddressEncoder = new ErgoAddressEncoder(TestnetNetworkPrefix)
     val dk1 = proveDlogGen.sample.get
@@ -143,6 +159,12 @@ class SigmaCompilerTest extends CompilerTestingCommons with LangTests with Objec
       BigIntConstant(new BigInteger("326674862673836209462483453386286740270338859283019276168539876024851191344"))
     comp(""" bigInt("-10") """) shouldBe
       BigIntConstant(-10L)
+  }
+
+  property("scala.math.BigInt in env compiles to BigIntConstant") {
+    val z: scala.math.BigInt = scala.math.BigInt("123456789012345678901234567890")
+    val envWithZ = env + ("z" -> z)
+    comp(envWithZ, "z") shouldBe BigIntConstant(new BigInteger("123456789012345678901234567890"))
   }
 
   property("fromBaseX") {
